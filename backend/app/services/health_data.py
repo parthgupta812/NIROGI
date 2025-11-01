@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from typing import Any, Dict
+from typing import Any, Dict, List
 
 import requests
 
@@ -38,6 +38,54 @@ class HealthDataService:
             raise HealthDataError(str(exc)) from exc
 
         return response.json()
+
+    def get_statewise_covid_data(self) -> List[Dict[str, Any]]:
+        """Return state-wise COVID-19 statistics for India."""
+        try:
+            response = requests.get("https://disease.sh/v3/covid-19/gov/India", timeout=10)
+            response.raise_for_status()
+            payload = response.json()
+        except requests.RequestException as exc:
+            raise HealthDataError(str(exc)) from exc
+        except ValueError as exc:
+            raise HealthDataError("Failed to parse state-wise COVID response.") from exc
+
+        states = payload.get("states") if isinstance(payload, dict) else None
+        if not isinstance(states, list):
+            raise HealthDataError("Unexpected payload shape for state-wise COVID data.")
+
+        return states
+
+    def get_nearby_hospitals(self, city_name: str) -> List[Dict[str, Any]]:
+        """Return a list of hospitals and clinics for the specified city using Overpass."""
+        if not city_name:
+            raise HealthDataError("City name is required to fetch nearby hospitals.")
+
+        overpass_url = "https://overpass-api.de/api/interpreter"
+        query = (
+            "[out:json];\n"
+            f"area[name=\"{city_name}\"]->.searchArea;\n"
+            "(\n"
+            "  nwr[\"amenity\"=\"hospital\"](area.searchArea);\n"
+            "  nwr[\"amenity\"=\"clinic\"](area.searchArea);\n"
+            ");\n"
+            "out body;"
+        )
+
+        try:
+            response = requests.post(overpass_url, data={"data": query}, timeout=15)
+            response.raise_for_status()
+            payload = response.json()
+        except requests.RequestException as exc:
+            raise HealthDataError(str(exc)) from exc
+        except ValueError as exc:
+            raise HealthDataError("Failed to parse Overpass response.") from exc
+
+        elements = payload.get("elements", [])
+        if not isinstance(elements, list):
+            raise HealthDataError("Unexpected Overpass payload structure.")
+
+        return elements
 
     def fetch_contextual_data(self, topic: str, region: str | None = None) -> Dict[str, str]:
         """Fetch data related to the supplied health topic.

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import logging
 from http import HTTPStatus
 from typing import Any, Dict
@@ -49,6 +50,7 @@ def chat() -> Any:
     if not message:
         return jsonify({"error": "message is required"}), HTTPStatus.BAD_REQUEST
 
+    context_token = (data.get("context") or "").strip().lower()
     preferred_language = (data.get("language") or "").strip().lower()
     source_language = preferred_language or detect_language(message)
 
@@ -60,7 +62,81 @@ def chat() -> Any:
             HTTPStatus.BAD_REQUEST,
         )
 
+    try:
+        is_supported_language(source_language)
+    except ValueError:
+        return (
+            jsonify({"error": f"Language '{source_language}' is not supported yet."}),
+            HTTPStatus.BAD_REQUEST,
+        )
+
     translation_service: TranslationService = current_app.extensions["translation_service"]
+
+    if context_token == "awaiting_city_for_hospitals":
+        try:
+            if source_language != "en":
+                translation_result = translation_service.translate(
+                    message,
+                    target_language="en",
+                    source_language=source_language,
+                )
+                city_prompt = translation_result.text.strip()
+                normalized_language = translation_result.detected_language
+            else:
+                city_prompt = message
+                normalized_language = source_language
+        except TranslationServiceError as exc:
+            logger.exception("Translation failed while processing hospital city context.")
+            return jsonify({"error": str(exc)}), HTTPStatus.INTERNAL_SERVER_ERROR
+
+        if not city_prompt:
+            return jsonify({"error": "city name is required"}), HTTPStatus.BAD_REQUEST
+
+        health_service: HealthDataService = current_app.extensions["health_data_service"]
+        try:
+            hospitals = health_service.get_nearby_hospitals(city_prompt)
+        except HealthDataError as exc:
+            logger.exception("Failed to fetch hospitals for %s", city_prompt)
+            return jsonify({"error": str(exc)}), HTTPStatus.BAD_GATEWAY
+
+        gemini_client: GeminiClient = current_app.extensions["gemini_client"]
+        hospitals_payload = json.dumps(hospitals, ensure_ascii=False)
+        follow_up_prompt = (
+            f"Here is a list of hospitals in {city_prompt}: {hospitals_payload}. "
+            "Please format the top 3-4 results for the user, showing only the name "
+            "and any available address information."
+        )
+
+        try:
+            llm_response = gemini_client.generate_health_response(follow_up_prompt, NIROGI_SYSTEM_PROMPT)
+        except GeminiClientError as exc:
+            logger.exception("Gemini request failed while summarising hospital list.")
+            return jsonify({"error": str(exc)}), HTTPStatus.BAD_GATEWAY
+
+        response_text = (llm_response.text or "").strip()
+
+        try:
+            if preferred_language and preferred_language != "en":
+                translation_result = translation_service.translate(
+                    response_text,
+                    target_language=preferred_language,
+                )
+                response_text = translation_result.text
+        except TranslationServiceError as exc:
+            logger.warning("Failed to translate hospital response back to %s: %s", preferred_language, exc)
+
+        payload = {
+            "message": response_text,
+            "source_language": normalized_language,
+            "language": preferred_language or normalized_language,
+            "metadata": {
+                "llm": llm_response.metadata,
+                "supplemental_data": {
+                    "hospitals": hospitals,
+                },
+            },
+        }
+        return jsonify(payload)
 
     try:
         if source_language != "en":
@@ -82,13 +158,50 @@ def chat() -> Any:
         return jsonify({"error": str(exc)}), HTTPStatus.BAD_GATEWAY
 
     health_service: HealthDataService = current_app.extensions["health_data_service"]
-    try:
-        supplemental_data = health_service.fetch_contextual_data(topic=normalized_prompt)
-    except HealthDataError as exc:
-        logger.warning("Health data fetch failed: %s", exc)
-        supplemental_data = {"warning": "Health data unavailable"}
+    supplemental_data: Dict[str, Any] = {}
 
-    response_text = llm_response.text
+    response_text = (llm_response.text or "").strip()
+
+    if response_text == "@@FETCH_COVID_STATS@@":
+        try:
+            state_data = health_service.get_statewise_covid_data()
+        except HealthDataError as exc:
+            logger.exception("State-wise COVID data fetch failed.")
+            return jsonify({"error": str(exc)}), HTTPStatus.BAD_GATEWAY
+
+        supplemental_data["statewise_covid"] = state_data
+        stats_payload = json.dumps(state_data, ensure_ascii=False)
+        follow_up_prompt = (
+            "Here is the live, state-wise COVID-19 data for all of India: "
+            f"{stats_payload}. Please summarize this for the user in a simple, "
+            "empathetic table, showing the state, active cases, and cured."
+        )
+
+        try:
+            llm_response = gemini_client.generate_health_response(follow_up_prompt, NIROGI_SYSTEM_PROMPT)
+        except GeminiClientError as exc:
+            logger.exception("Gemini follow-up request failed.")
+            return jsonify({"error": str(exc)}), HTTPStatus.BAD_GATEWAY
+
+        response_text = (llm_response.text or "").strip()
+    elif response_text == "@@FETCH_HOSPITALS@@":
+        follow_up_prompt = (
+            "To find hospitals, I need to know your city or district name. Please tell me your city."
+        )
+        try:
+            llm_response = gemini_client.generate_health_response(follow_up_prompt, NIROGI_SYSTEM_PROMPT)
+        except GeminiClientError as exc:
+            logger.exception("Gemini follow-up request failed while requesting city.")
+            return jsonify({"error": str(exc)}), HTTPStatus.BAD_GATEWAY
+
+        response_text = (llm_response.text or "").strip()
+        supplemental_data["context"] = "awaiting_city_for_hospitals"
+    else:
+        try:
+            supplemental_data = health_service.fetch_contextual_data(topic=normalized_prompt)
+        except HealthDataError as exc:
+            logger.warning("Health data fetch failed: %s", exc)
+            supplemental_data = {"warning": "Health data unavailable"}
 
     try:
         if preferred_language and preferred_language != "en":
@@ -107,6 +220,23 @@ def chat() -> Any:
         },
     }
     return jsonify(payload)
+
+
+@api_bp.get("/test-hospitals")
+def test_hospitals() -> Any:
+    """Temporary route to fetch hospitals for a given city using Overpass."""
+    city = (request.args.get("city") or "").strip()
+    if not city:
+        return jsonify({"error": "city query parameter is required"}), HTTPStatus.BAD_REQUEST
+
+    health_service: HealthDataService = current_app.extensions["health_data_service"]
+    try:
+        hospitals = health_service.get_nearby_hospitals(city)
+    except HealthDataError as exc:
+        logger.exception("Failed to fetch hospitals for %s", city)
+        return jsonify({"error": str(exc)}), HTTPStatus.BAD_GATEWAY
+
+    return jsonify({"city": city, "hospitals": hospitals})
 
 
 @api_bp.post("/translate")
