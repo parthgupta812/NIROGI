@@ -25,6 +25,10 @@ NIROGI_SYSTEM_PROMPT = (
     "you must reply with only the exact text: @@FETCH_COVID_STATS@@ and nothing else."
     "\nHospital Tool: If the user asks for 'nearby hospitals', 'clinics near me', or 'doctors in my area', "
     "you must reply with only the exact text: @@FETCH_HOSPITALS@@ and nothing else."
+    "\nVaccine Tool: If the user asks for 'vaccine schedule', 'immunization chart', or 'vaccines for baby', "
+    "you must reply with only the exact text: @@FETCH_VACCINE_SCHEDULE@@"
+    "\nDisease Alert Tool: If the user asks for 'dengue alert', 'malaria cases', or 'dengue outbreak', "
+    "you must reply with only the exact text: @@FETCH_DISEASE_OUTBREAK@@"
 )
 
 
@@ -109,6 +113,10 @@ class GeminiClient:
             model_id=self.model_id,
         )
         return GeminiResponse(text=text, metadata={"provider": self.model_id})
+
+    def get_response(self, prompt: str, system_prompt: Optional[str] = None) -> GeminiResponse:
+        """Convenience wrapper mirroring generate_health_response semantics."""
+        return self.generate_health_response(prompt, system_prompt)
 
     @staticmethod
     def _build_mock_response(user_prompt: str) -> str:

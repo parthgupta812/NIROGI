@@ -1,0 +1,18 @@
+{
+    "alerts": [
+        {
+            "disease": "Dengue",
+            "region": "Delhi",
+            "status": "High Alert",
+            "cases_reported": 152,
+            "advice": "Clear all stagnant water. Use mosquito repellents and nets."
+        },
+        {
+            "disease": "Malaria",
+            "region": "Mumbai",
+            "status": "Moderate Alert",
+            "cases_reported": 89,
+            "advice": "Ensure no standing water. Wear full-sleeve clothing in the evening."
+        }
+    ]
+}

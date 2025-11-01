@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nirogi Chatbot</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+</head>
+
+<body class="chat-page transition-page">
+
+    <div class="chat-page-container">
+
+        <header class="chat-header-full shadowed">
+            <a href="index.html" class="back-button">← Home</a>
+            <div class="logo brand-logo hover-grow">🩺 Nirogi</div>
+            <div class="lang-selector">
+                <label for="language">Language:</label>
+                <select id="language">
+                    <option value="en">English</option>
+                    <option value="hi">Hindi (हिंदी)</option>
+                </select>
+            </div>
+        </header>
+
+        <div class="chat-window-full" id="chat-window">
+            <div class="message bot-message message-with-avatar animate-slide-in" data-message-id="init">
+                <div class="bot-avatar" aria-hidden="true"></div>
+                <p class="message-copy">Hello! I am Nirogi, your AI health companion. How can I help you today?</p>
+            </div>
+        </div>
+
+        <footer class="chat-input-area">
+            <div class="chat-input-wrapper">
+                <div class="floating-quick-suggestions animate-fade-in" id="quick-buttons-container">
+                    <button class="quick-btn" data-message="What are the live COVID stats?">Outbreak Alerts</button>
+                    <button class="quick-btn" data-message="I need a hospital nearby">Nearby Hospitals</button>
+                    <button class="quick-btn" data-message="What are preventive health tips?">Preventive Tips</button>
+                </div>
+
+                <form class="chat-input-form redesigned" id="chat-form">
+                    <div class="input-shell">
+                        <input type="text" id="message-input"
+                            placeholder="Ask about symptoms, vaccines, or health tips…" autocomplete="off" required>
+                    </div>
+                    <button type="submit" id="send-button" aria-label="Send message">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="22"
+                            height="22">
+                            <path
+                                d="M3.4 20.9L21 13.5C21.8 13.2 21.8 11.9 21 11.6L3.4 4.2C2.6 3.9 1.8 4.7 2.1 5.5L4.9 12.4C4.9 12.4 4.9 12.4 4.9 12.5C4.9 12.6 4.9 12.6 4.9 12.7L2.1 19.6C1.8 20.4 2.6 21.2 3.4 20.9Z" />
+                        </svg>
+                    </button>
+                </form>
+            </div>
+        </footer>
+
+    </div>
+
+    <script src="chat.js"></script>
+</body>
+
+</html>

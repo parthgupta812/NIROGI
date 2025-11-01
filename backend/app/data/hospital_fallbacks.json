@@ -1,0 +1,63 @@
+{
+    "fallbacks": {
+        "delhi": [
+            {
+                "type": "node",
+                "id": 1,
+                "lat": 28.5672,
+                "lon": 77.2100,
+                "tags": {
+                    "name": "AIIMS Delhi",
+                    "addr:full": "Ansari Nagar, New Delhi",
+                    "amenity": "hospital"
+                }
+            },
+            {
+                "type": "node",
+                "id": 2,
+                "lat": 28.6139,
+                "lon": 77.2090,
+                "tags": {
+                    "name": "Safdarjung Hospital",
+                    "addr:full": "Ring Road, New Delhi",
+                    "amenity": "hospital"
+                }
+            },
+            {
+                "type": "node",
+                "id": 3,
+                "lat": 28.6315,
+                "lon": 77.2167,
+                "tags": {
+                    "name": "Lok Nayak Hospital",
+                    "addr:full": "Jawaharlal Nehru Marg, New Delhi",
+                    "amenity": "hospital"
+                }
+            }
+        ],
+        "mumbai": [
+            {
+                "type": "node",
+                "id": 4,
+                "lat": 19.0657,
+                "lon": 72.8366,
+                "tags": {
+                    "name": "KEM Hospital",
+                    "addr:full": "Parel, Mumbai",
+                    "amenity": "hospital"
+                }
+            },
+            {
+                "type": "node",
+                "id": 5,
+                "lat": 19.0176,
+                "lon": 72.8562,
+                "tags": {
+                    "name": "Bombay Hospital",
+                    "addr:full": "Marine Lines, Mumbai",
+                    "amenity": "hospital"
+                }
+            }
+        ]
+    }
+}

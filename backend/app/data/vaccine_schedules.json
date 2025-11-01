@@ -1,0 +1,53 @@
+{
+    "schedule": [
+        {
+            "age": "At Birth",
+            "vaccines": [
+                "BCG",
+                "OPV 0-dose",
+                "Hepatitis B - Birth dose"
+            ]
+        },
+        {
+            "age": "At 6 Weeks",
+            "vaccines": [
+                "OPV-1",
+                "Pentavalent-1",
+                "Rotavirus-1",
+                "PCV-1"
+            ]
+        },
+        {
+            "age": "At 10 Weeks",
+            "vaccines": [
+                "OPV-2",
+                "Pentavalent-2",
+                "Rotavirus-2"
+            ]
+        },
+        {
+            "age": "At 14 Weeks",
+            "vaccines": [
+                "OPV-3",
+                "Pentavalent-3",
+                "Rotavirus-3",
+                "PCV-2"
+            ]
+        },
+        {
+            "age": "At 9-12 Months",
+            "vaccines": [
+                "Measles-Rubella (MR) - 1st Dose",
+                "PCV Booster"
+            ]
+        },
+        {
+            "age": "At 16-24 Months",
+            "vaccines": [
+                "DPT - 1st Booster",
+                "OPV Booster",
+                "Measles-Rubella (MR) - 2nd Dose"
+            ]
+        }
+    ]
+}
